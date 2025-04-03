@@ -2,7 +2,8 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Floor Plan</title>
+    <meta charset="UTF-8">
+    <title>Scanner</title>
     <!-- jQuery & jQuery UI -->
     <script src="https://code.jquery.com/jquery-3.7.1.js" 
             integrity="sha256-eKhayi8LEQwp4NKxN+CfCh+3qOVUtJn3QNZ0TciWLP4=" 
@@ -10,18 +11,21 @@
     <script src="https://code.jquery.com/ui/1.13.3/jquery-ui.js" 
             integrity="sha256-J8ay84czFazJ9wcTuSDLpPmwpMXOm573OUtZHPQqpEU=" 
             crossorigin="anonymous"></script>
-    <!-- Include jQuery UI CSS -->
+    <!-- jQuery UI CSS -->
     <link rel="stylesheet" href="https://code.jquery.com/ui/1.13.3/themes/base/jquery-ui.css" crossorigin="anonymous">
+    <!-- Bootstrap CSS -->
+    <link href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" rel="stylesheet">
 
     
     <style>
         /* A container to hold the background blueprint */
         .floorplan-container {
             position: relative;
-            width: 1358px;  /* adjust to your actual image width */
-            height: 686px;  /* adjust to your actual image height */
-            background: url("{% static 'images/map_2d.png' %}") no-repeat center;
+            width: 1358px;  /* adjust as needed */
+            height: 686px;  /* adjust as needed */
+            /* background: url("{% static 'images/map_2d.png' %}") no-repeat center; */
             background-size: cover;
+            background-position: center;
             border: 1px solid #ccc;
             margin: 20px auto;
         }
@@ -31,34 +35,115 @@
             background-color: rgba(255, 0, 0, 0.3);
             border: 1px solid #ff0000;
             cursor: move; /* shows draggable cursor */
-            transition: all 0.1s ease; /* smooth movement */
+            transition: all 0.s ease; /* smooth movement */
+        }
+        .modal-body {
+            max-height: calc(100vh - 200px);
+            overflow-y: auto;
         }
     </style>
 </head>
 <body>
-
-<h1>Floor Plan Layout</h1>
-
-<div class="floorplan-container" id="floorplan">
-    {% for box in boxes %}
-        <div 
-            class="box" 
-            id="box-{{ box.id }}"
-            style="
-                left: {{ box.x|floatformat:"0" }}px; 
-                top:  {{ box.y|floatformat:"0" }}px; 
-                width: {{ box.width|floatformat:"0" }}px; 
-                height: {{ box.height|floatformat:"0" }}px;">
-            <div class="box-info">
-                x: {{ box.x|floatformat:"0" }}, y: {{ box.y|floatformat:"0" }}<br>w: {{ box.width|floatformat:"0" }}, h: {{ box.height|floatformat:"0" }}
+    <div class="container-fluid">
+        <!-- Navigation bar -->
+        <nav class="navbar navbar-expand-lg navbar-light bg-light mb-3">
+            <a class="navbar-brand" href="#">Scanner UI</a>
+            <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarContent" 
+                aria-controls="navbarContent" aria-expanded="false" aria-label="Toggle navigation">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+    
+            <div class="container-fluid d-flex align-items-center">
+                <!-- Left: File input with English label -->
+                <div class="d-flex align-items-center">
+                    <input type="file" id="bg-image-input" class="form-control-file" accept="image/*">
+                </div>
+                <!-- Right: Buttons for history and chart (same size, aligned right) -->
+                <div class="ml-auto">
+                    <button id="btn-view-history" class="btn btn-primary m-2">View Operation History</button>
+                    <button id="btn-view-chart" class="btn btn-primary m-2">View Operation Chart</button>
+                </div>
+            </div>
+        </nav>
+    
+        <!-- Floorplan area -->
+        <div id="floorplan-wrapper">
+            <div class="floorplan-container" id="floorplan"
+                 style="background-image: url('{% static 'images/map_2d.png' %}');">
+                {% for box in boxes %}
+                    <div 
+                        class="box" 
+                        id="box-{{ box.id }}"
+                        style="
+                            left: {{ box.x|floatformat:"0" }}px; 
+                            top:  {{ box.y|floatformat:"0" }}px; 
+                            width: {{ box.width|floatformat:"0" }}px; 
+                            height: {{ box.height|floatformat:"0" }}px;">
+                        <div class="box-info">
+                            x: {{ box.x|floatformat:"0" }}, <br>y: {{ box.y|floatformat:"0" }}<br>w: {{ box.width|floatformat:"0" }}, <br>h: {{ box.height|floatformat:"0" }}
+                        </div>
+                    </div>
+                {% endfor %}
             </div>
         </div>
-    {% endfor %}
-</div>
-<div id="notification" style="position: fixed; top: 10px; right: 10px; padding: 10px; background: #28a745; color: #fff; display: none;"></div>
+    
+        <!-- Modal for Operation History -->
+        <div class="modal fade" id="historyModal" tabindex="-1" role="dialog" aria-labelledby="historyModalLabel" aria-hidden="true">
+            <div class="modal-dialog modal-lg" role="document">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="historyModalLabel">Operation History (Last 10 Records)</h5>
+                        <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                          <span aria-hidden="true">&times;</span>
+                        </button>
+                    </div>
+                    <div class="modal-body">
+                        <table class="table table-striped" id="history-table">
+                            <thead>
+                                <tr>
+                                    <th>Timestamp</th>
+                                    <th>Box ID</th>
+                                    <th>Action</th>
+                                    <th>X</th>
+                                    <th>Y</th>
+                                    <th>Width</th>
+                                    <th>Height</th>
+                                    <th>Delete</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <!-- History data loaded via AJAX -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
 
+        <!-- Modal for Operation Chart -->
+        <div class="modal fade" id="chartModal" tabindex="-1" role="dialog" aria-labelledby="chartModalLabel" aria-hidden="true">
+            <div class="modal-dialog" role="document">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="chartModalLabel">Operation Chart</h5>
+                        <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                          <span aria-hidden="true">&times;</span>
+                        </button>
+                    </div>
+                    <div class="modal-body">
+                        <canvas id="operationChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
 
-<script>
+        <div id="notification" style="position: fixed; top: 10px; right: 10px; padding: 10px; background: #28a745; color: #fff; display: none;">
+    </div>
+
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    <script>
     // CSRF setup for AJAX (if using Django's CSRF protection)
     function getCookie(name) {
         let cookieValue = null;
@@ -84,7 +169,134 @@
         }
     });
 
-    // Make boxes draggable & resizable with realtime info updates
+    // Background image selection: update the floorplan container background
+    document.getElementById('bg-image-input').addEventListener('change', function(event) {
+        const file = event.target.files[0];
+        if (file) {
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                document.getElementById('floorplan').style.backgroundImage = 'url(' + e.target.result + ')';
+            }
+            reader.readAsDataURL(file);
+        }
+    });
+    
+    // Load operation history via AJAX when "View Operation History" button is clicked
+    document.getElementById('btn-view-history').addEventListener('click', function(){
+        $.ajax({
+            url: '/api/logs/',
+            type: 'GET',
+            success: function(data) {
+                // If using pagination, adjust accordingly
+                let logs = data.results ? data.results : data;
+                // Show only the last 10 records
+                logs = logs.slice(0, 10);
+                let tbody = '';
+                logs.forEach(function(log) {
+                    // Format timestamp as '%Y-%m-%dT%H:%M:%S'
+                    let dt = new Date(log.timestamp);
+                    let year = dt.getFullYear();
+                    let month = (dt.getMonth() + 1).toString().padStart(2, '0');
+                    let day = dt.getDate().toString().padStart(2, '0');
+                    let hours = dt.getHours().toString().padStart(2, '0');
+                    let minutes = dt.getMinutes().toString().padStart(2, '0');
+                    let seconds = dt.getSeconds().toString().padStart(2, '0');
+                    let formattedTimestamp = `${year}-${month}-${day}<br>T${hours}:${minutes}:${seconds}`;
+                    
+                    // Format x, y, width, height to two-decimal float numbers
+                    let formattedX = parseFloat(log.x).toFixed(2);
+                    let formattedY = parseFloat(log.y).toFixed(2);
+                    let formattedWidth = parseFloat(log.width).toFixed(2);
+                    let formattedHeight = parseFloat(log.height).toFixed(2);
+                    
+                    tbody += `<tr>
+                        <td>${formattedTimestamp}</td>
+                        <td>${log.box}</td>
+                        <td>${log.action}</td>
+                        <td>${formattedX}</td>
+                        <td>${formattedY}</td>
+                        <td>${formattedWidth}</td>
+                        <td>${formattedHeight}</td>
+                        <td><button class="btn btn-danger btn-sm" onclick="deleteOperationLog(${log.id})">Delete</button></td>
+                    </tr>`;
+                });
+                $('#history-table tbody').html(tbody);
+                $('#historyModal').modal('show');
+            },
+            error: function(err) {
+                console.error('Error loading history:', err);
+            }
+        });
+    });
+
+    // Global variable to store the chart instance
+    var operationChartInstance = null;
+    
+    // Load operation chart via AJAX when "View Operation Chart" button is clicked
+    document.getElementById('btn-view-chart').addEventListener('click', function(){
+        $.ajax({
+            url: '/api/logs/',
+            type: 'GET',
+            success: function(data) {
+                let logs = data.results ? data.results : data;
+                // Example: count operations per action type
+                const actions = data.map(log => log.action);
+                const actionCounts = {};
+                actions.forEach(action => {
+                    actionCounts[action] = (actionCounts[action] || 0) + 1;
+                });
+                const labels = Object.keys(actionCounts);
+                const counts = Object.values(actionCounts);
+    
+                const ctx = document.getElementById('operationChart').getContext('2d');
+                // If a chart instance already exists, destroy it before creating a new one.
+                if (operationChartInstance !== null) {
+                    operationChartInstance.destroy();
+                }
+                operationChartInstance = new Chart(ctx, {
+                    type: 'bar',
+                    data: {
+                        labels: labels,
+                        datasets: [{
+                            label: 'Operation Count',
+                            data: counts,
+                            backgroundColor: 'rgba(75, 192, 192, 0.2)',
+                            borderColor: 'rgba(75, 192, 192, 1)',
+                            borderWidth: 1
+                        }]
+                    },
+                    options: {
+                        scales: {
+                            y: { beginAtZero: true }
+                        }
+                    }
+                });
+                $('#chartModal').modal('show');
+            },
+            error: function(err) {
+                console.error('Error loading chart data:', err);
+            }
+        });
+    });
+
+    // Function to delete an operation log
+    function deleteOperationLog(logId) {
+        $.ajax({
+            url: '/api/logs/' + logId + '/',
+            type: 'DELETE',
+            success: function(response) {
+                showNotification("Delete success");
+                // Reload history to update the table
+                $('#btn-view-history').click();
+            },
+            error: function(err) {
+                console.error("Error deleting log:", err);
+                showNotification("Delete error", false);
+            }
+        });
+    }
+
+    // Initialize draggable and resizable for boxes with real-time info updates
     $(function(){
         $('.box').each(function(){
             const box = $(this);
@@ -121,38 +333,7 @@
         });
     });
 
-    function updateBoxPosition(id, x, y, width, height){
-        // Build data for AJAX
-        const data = {
-            id: id,
-            x: x,
-            y: y,
-            width: width,
-            height: height
-        };
-
-        $.ajax({
-            url: "{% url 'update_box' %}",
-            type: "POST",
-            data: JSON.stringify(data),
-            contentType: "application/json; charset=utf-8",
-            success: function(response){
-                console.log("Update success:", response);
-            },
-            error: function(xhr){
-                console.error("Update error:", xhr);
-            }
-        });
-    }
-
-    function showNotification(message, success=true) {
-    const notify = $('#notification');
-    notify.css({
-        'background': success ? '#28a745' : '#dc3545'
-    });
-    notify.text(message).fadeIn(200).delay(1000).fadeOut(200);
-    }
-
+    // Function to update the box's position in the backend.
     function updateBoxPosition(id, x, y, width, height, actionType){
         const data = {
             id: id,
@@ -160,7 +341,7 @@
             y: y,
             width: width,
             height: height,
-            action: actionType  // 新增動作類型，便於日誌記錄
+            action: actionType
         };
 
         $.ajax({
@@ -169,17 +350,25 @@
             data: JSON.stringify(data),
             contentType: "application/json; charset=utf-8",
             success: function(response){
-                showNotification("儲存成功");
+                showNotification("Update success");
                 console.log("Update success:", response);
             },
             error: function(xhr){
-                showNotification("儲存失敗", false);
+                showNotification("Update error", false);
                 console.error("Update error:", xhr);
             }
         });
     }
 
-</script>
+    function showNotification(message, success=true) {
+        const notify = $('#notification');
+        notify.css({
+            'background': success ? '#28a745' : '#dc3545'
+        });
+        notify.text(message).fadeIn(200).delay(1000).fadeOut(200);
+    }
+
+    </script>
 
 </body>
 </html>
