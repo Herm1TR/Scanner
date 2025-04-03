@@ -109,6 +109,7 @@
                                     <th>Width</th>
                                     <th>Height</th>
                                     <th>Delete</th>
+                                    <th>Restore</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -190,7 +191,8 @@
                 // If using pagination, adjust accordingly
                 let logs = data.results ? data.results : data;
                 // Show only the last 10 records
-                logs = logs.slice(0, 10);
+                logs.sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
+                logs = logs.slice(-10);
                 let tbody = '';
                 logs.forEach(function(log) {
                     // Format timestamp as '%Y-%m-%dT%H:%M:%S'
@@ -301,6 +303,7 @@
         });
     }
 
+    // Function to restore an operation log
     function restoreOperationLog(boxId, x, y, width, height) {
         // Prepare data to restore the box's state.
         const data = {
@@ -347,8 +350,13 @@
             const box = $(this);
             const boxId = box.attr('id').split('-')[1];  // "box-12" => "12"
 
+            // Initialize draggable with confirmation on stop
             box.draggable({
                 containment: "#floorplan",
+                start: function(event, ui) {
+                    // Store original position before dragging starts.
+                    box.data('oldPosition', { left: ui.position.left, top: ui.position.top });
+                },
                 drag: function(event, ui){
                     box.find('.box-info').html(
                         "x: " + Math.round(ui.position.left) + 
@@ -358,11 +366,39 @@
                     );
                 },
                 stop: function(event, ui){
-                    updateBoxPosition(boxId, ui.position.left, ui.position.top, box.width(), box.height());
+                    const newLeft = ui.position.left;
+                    const newTop = ui.position.top;
+                    const newWidth = box.width();
+                    const newHeight = box.height();
+                    const oldPosition = box.data('oldPosition');
+                    const msg = `Do you want to save these changes?\nNew Position: x: ${Math.round(newLeft)}, y: ${Math.round(newTop)}\nNew Size: w: ${Math.round(newWidth)}, h: ${Math.round(newHeight)}`;
+                    if(window.confirm(msg)) {
+                        // If confirmed, update via AJAX
+                        updateBoxPosition(boxId, newLeft, newTop, newWidth, newHeight);
+                    } else {
+                        // If canceled, revert to the stored old position.
+                        if(oldPosition) {
+                            box.css({
+                                left: oldPosition.left + "px",
+                                top: oldPosition.top + "px"
+                            });
+                            // Update displayed info to the old values.
+                            box.find('.box-info').html(
+                                "x: " + Math.round(oldPosition.left) + 
+                                ", y: " + Math.round(oldPosition.top) + 
+                                "<br>w: " + Math.round(newWidth) + 
+                                ", h: " + Math.round(newHeight)
+                            );
+                        }
+                    }
                 }
             }).resizable({
                 containment: "#floorplan",
                 handles: 'se', // explicitly set the south-east handle
+                start: function(event, ui) {
+                // Store original size (and position) before resizing.
+                box.data('oldSize', { left: ui.position.left, top: ui.position.top, width: ui.size.width, height: ui.size.height });
+                },
                 resize: function(event, ui){
                     box.find('.box-info').html(
                         "x: " + Math.round(ui.position.left) + 
@@ -372,21 +408,45 @@
                     );
                 },
                 stop: function(event, ui){
-                    updateBoxPosition(boxId, ui.position.left, ui.position.top, ui.size.width, ui.size.height);
+                    const newLeft = ui.position.left;
+                    const newTop = ui.position.top;
+                    const newWidth = ui.size.width;
+                    const newHeight = ui.size.height;
+                    const oldSize = box.data('oldSize');
+                    const msg = `Do you want to save these changes?\nNew Position: x: ${Math.round(newLeft)}, y: ${Math.round(newTop)}\nNew Size: w: ${Math.round(newWidth)}, h: ${Math.round(newHeight)}`;
+                    if(window.confirm(msg)) {
+                        updateBoxPosition(boxId, newLeft, newTop, newWidth, newHeight);
+                    } else {
+                        // Revert back to old size and position.
+                        if(oldSize) {
+                            box.css({
+                                left: oldSize.left + "px",
+                                top: oldSize.top + "px",
+                                width: oldSize.width + "px",
+                                height: oldSize.height + "px"
+                            });
+                            box.find('.box-info').html(
+                                "x: " + Math.round(oldSize.left) + 
+                                ", y: " + Math.round(oldSize.top) + 
+                                "<br>w: " + Math.round(oldSize.width) + 
+                                ", h: " + Math.round(oldSize.height)
+                            );
+                        }
+                    }
                 }
             });
         });
     });
 
     // Function to update the box's position in the backend.
-    function updateBoxPosition(id, x, y, width, height, actionType){
+    function updateBoxPosition(id, x, y, width, height) {
         const data = {
             id: id,
             x: x,
             y: y,
             width: width,
             height: height,
-            action: actionType
+            action: "update"
         };
 
         $.ajax({
@@ -394,11 +454,11 @@
             type: "POST",
             data: JSON.stringify(data),
             contentType: "application/json; charset=utf-8",
-            success: function(response){
+            success: function(response) {
                 showNotification("Update success");
                 console.log("Update success:", response);
             },
-            error: function(xhr){
+            error: function(xhr) {
                 showNotification("Update error", false);
                 console.error("Update error:", xhr);
             }
