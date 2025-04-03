@@ -217,7 +217,12 @@
                         <td>${formattedY}</td>
                         <td>${formattedWidth}</td>
                         <td>${formattedHeight}</td>
-                        <td><button class="btn btn-danger btn-sm" onclick="deleteOperationLog(${log.id})">Delete</button></td>
+                        <td>
+                            <button class="btn btn-danger btn-sm" onclick="deleteOperationLog(${log.id})">Delete</button>
+                        </td>
+                        <td>
+                            <button class="btn btn-warning btn-sm" onclick="restoreOperationLog(${log.box}, ${log.x}, ${log.y}, ${log.width}, ${log.height})">Restore</button>
+                        </td>
                     </tr>`;
                 });
                 $('#history-table tbody').html(tbody);
@@ -292,6 +297,46 @@
             error: function(err) {
                 console.error("Error deleting log:", err);
                 showNotification("Delete error", false);
+            }
+        });
+    }
+
+    function restoreOperationLog(boxId, x, y, width, height) {
+        // Prepare data to restore the box's state.
+        const data = {
+            id: boxId,
+            x: x,
+            y: y,
+            width: width,
+            height: height,
+            action: "restore"
+        };
+        $.ajax({
+            url: "{% url 'update_box' %}",
+            type: "POST",
+            data: JSON.stringify(data),
+            contentType: "application/json; charset=utf-8",
+            success: function(response) {
+                showNotification("Restore success");
+                // Update the corresponding box element immediately.
+                const boxElem = $("#box-" + boxId);
+                boxElem.css({
+                    left: Math.round(x) + "px",
+                    top: Math.round(y) + "px",
+                    width: Math.round(width) + "px",
+                    height: Math.round(height) + "px"
+                });
+                // Also update the .box-info text to reflect integer values.
+                boxElem.find('.box-info').html(
+                    "x: " + Math.round(x) + 
+                    ", y: " + Math.round(y) + 
+                    "<br>w: " + Math.round(width) + 
+                    ", h: " + Math.round(height)
+                );
+            },
+            error: function(xhr) {
+                showNotification("Restore error", false);
+                console.error("Restore error:", xhr);
             }
         });
     }
