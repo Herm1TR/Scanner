@@ -31,6 +31,7 @@
             background-color: rgba(255, 0, 0, 0.3);
             border: 1px solid #ff0000;
             cursor: move; /* shows draggable cursor */
+            transition: all 0.1s ease; /* smooth movement */
         }
     </style>
 </head>
@@ -54,6 +55,8 @@
         </div>
     {% endfor %}
 </div>
+<div id="notification" style="position: fixed; top: 10px; right: 10px; padding: 10px; background: #28a745; color: #fff; display: none;"></div>
+
 
 <script>
     // CSRF setup for AJAX (if using Django's CSRF protection)
@@ -141,6 +144,41 @@
             }
         });
     }
+
+    function showNotification(message, success=true) {
+    const notify = $('#notification');
+    notify.css({
+        'background': success ? '#28a745' : '#dc3545'
+    });
+    notify.text(message).fadeIn(200).delay(1000).fadeOut(200);
+    }
+
+    function updateBoxPosition(id, x, y, width, height, actionType){
+        const data = {
+            id: id,
+            x: x,
+            y: y,
+            width: width,
+            height: height,
+            action: actionType  // 新增動作類型，便於日誌記錄
+        };
+
+        $.ajax({
+            url: "{% url 'update_box' %}",
+            type: "POST",
+            data: JSON.stringify(data),
+            contentType: "application/json; charset=utf-8",
+            success: function(response){
+                showNotification("儲存成功");
+                console.log("Update success:", response);
+            },
+            error: function(xhr){
+                showNotification("儲存失敗", false);
+                console.error("Update error:", xhr);
+            }
+        });
+    }
+
 </script>
 
 </body>
