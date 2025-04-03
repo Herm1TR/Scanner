@@ -1,0 +1,147 @@
+{% load static %}
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Floor Plan</title>
+    <!-- jQuery & jQuery UI -->
+    <script src="https://code.jquery.com/jquery-3.7.1.js" 
+            integrity="sha256-eKhayi8LEQwp4NKxN+CfCh+3qOVUtJn3QNZ0TciWLP4=" 
+            crossorigin="anonymous"></script>
+    <script src="https://code.jquery.com/ui/1.13.3/jquery-ui.js" 
+            integrity="sha256-J8ay84czFazJ9wcTuSDLpPmwpMXOm573OUtZHPQqpEU=" 
+            crossorigin="anonymous"></script>
+    <!-- Include jQuery UI CSS -->
+    <link rel="stylesheet" href="https://code.jquery.com/ui/1.13.3/themes/base/jquery-ui.css" crossorigin="anonymous">
+
+    
+    <style>
+        /* A container to hold the background blueprint */
+        .floorplan-container {
+            position: relative;
+            width: 1358px;  /* adjust to your actual image width */
+            height: 686px;  /* adjust to your actual image height */
+            background: url("{% static 'images/map_2d.png' %}") no-repeat center;
+            background-size: cover;
+            border: 1px solid #ccc;
+            margin: 20px auto;
+        }
+
+        .box {
+            position: absolute;
+            background-color: rgba(255, 0, 0, 0.3);
+            border: 1px solid #ff0000;
+            cursor: move; /* shows draggable cursor */
+        }
+    </style>
+</head>
+<body>
+
+<h1>Floor Plan Layout</h1>
+
+<div class="floorplan-container" id="floorplan">
+    {% for box in boxes %}
+        <div 
+            class="box" 
+            id="box-{{ box.id }}"
+            style="
+                left: {{ box.x|floatformat:"0" }}px; 
+                top:  {{ box.y|floatformat:"0" }}px; 
+                width: {{ box.width|floatformat:"0" }}px; 
+                height: {{ box.height|floatformat:"0" }}px;">
+            <div class="box-info">
+                x: {{ box.x|floatformat:"0" }}, y: {{ box.y|floatformat:"0" }}<br>w: {{ box.width|floatformat:"0" }}, h: {{ box.height|floatformat:"0" }}
+            </div>
+        </div>
+    {% endfor %}
+</div>
+
+<script>
+    // CSRF setup for AJAX (if using Django's CSRF protection)
+    function getCookie(name) {
+        let cookieValue = null;
+        if (document.cookie && document.cookie !== '') {
+            const cookies = document.cookie.split(';');
+            for (let i = 0; i < cookies.length; i++) {
+                const cookie = cookies[i].trim();
+                if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                    cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                    break;
+                }
+            }
+        }
+        return cookieValue;
+    }
+    const csrftoken = getCookie('csrftoken');
+
+    $.ajaxSetup({
+        beforeSend: function(xhr, settings) {
+            if (!(/^http:.*/.test(settings.url) || /^https:.*/.test(settings.url))) {
+                xhr.setRequestHeader("X-CSRFToken", csrftoken);
+            }
+        }
+    });
+
+    // Make boxes draggable & resizable with realtime info updates
+    $(function(){
+        $('.box').each(function(){
+            const box = $(this);
+            const boxId = box.attr('id').split('-')[1];  // "box-12" => "12"
+
+            box.draggable({
+                containment: "#floorplan",
+                drag: function(event, ui){
+                    box.find('.box-info').html(
+                        "x: " + Math.round(ui.position.left) + 
+                        ", y: " + Math.round(ui.position.top) + 
+                        "<br>w: " + Math.round(box.width()) + 
+                        ", h: " + Math.round(box.height())
+                    );
+                },
+                stop: function(event, ui){
+                    updateBoxPosition(boxId, ui.position.left, ui.position.top, box.width(), box.height());
+                }
+            }).resizable({
+                containment: "#floorplan",
+                handles: 'se', // explicitly set the south-east handle
+                resize: function(event, ui){
+                    box.find('.box-info').html(
+                        "x: " + Math.round(ui.position.left) + 
+                        ", y: " + Math.round(ui.position.top) + 
+                        "<br>w: " + Math.round(ui.size.width) + 
+                        ", h: " + Math.round(ui.size.height)
+                    );
+                },
+                stop: function(event, ui){
+                    updateBoxPosition(boxId, ui.position.left, ui.position.top, ui.size.width, ui.size.height);
+                }
+            });
+        });
+    });
+
+    function updateBoxPosition(id, x, y, width, height){
+        // Build data for AJAX
+        const data = {
+            id: id,
+            x: x,
+            y: y,
+            width: width,
+            height: height
+        };
+
+        $.ajax({
+            url: "{% url 'update_box' %}",
+            type: "POST",
+            data: JSON.stringify(data),
+            contentType: "application/json; charset=utf-8",
+            success: function(response){
+                console.log("Update success:", response);
+            },
+            error: function(xhr){
+                console.error("Update error:", xhr);
+            }
+        });
+    }
+</script>
+
+</body>
+</html>
