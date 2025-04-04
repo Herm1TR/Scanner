@@ -448,7 +448,36 @@
         });
     });
 
-    // Function to update the box's position in the backend.
+    // Open a WebSocket connection to layout channel.
+    // const layoutSocket = new WebSocket(
+    // (window.location.protocol === "https:" ? "wss://" : "ws://") + window.location.host + "/ws/layout/"
+    // );
+
+    const wsUrl = (window.location.protocol === "https:" ? "wss://" : "ws://") + window.location.host + "/ws/layout/";
+    console.log("WebSocket URL:", wsUrl);
+    const layoutSocket = new WebSocket(wsUrl);
+
+
+    // When a message is received from the server, update the corresponding box.
+    layoutSocket.onmessage = function(e) {
+        const data = JSON.parse(e.data);
+        // Assume data contains { id, x, y, width, height }
+        const boxElem = $("#box-" + data.id);
+        if (boxElem.length > 0) {
+            boxElem.css({
+                left: Math.round(data.x) + "px",
+                top: Math.round(data.y) + "px",
+                width: Math.round(data.width) + "px",
+                height: Math.round(data.height) + "px"
+            });
+            boxElem.find('.box-info').html(
+                "x: " + Math.round(data.x) + ", y: " + Math.round(data.y) +
+                "<br>w: " + Math.round(data.width) + ", h: " + Math.round(data.height)
+            );
+        }
+    };
+
+    // Function to update the box's position in the backend, and also send a WebSocket message.
     function updateBoxPosition(id, x, y, width, height) {
         const data = {
             id: id,
@@ -459,6 +488,7 @@
             action: "update"
         };
 
+        // Send update via AJAX.
         $.ajax({
             url: "{% url 'update_box' %}",
             type: "POST",
@@ -473,6 +503,9 @@
                 console.error("Update error:", xhr);
             }
         });
+
+        // Send update to the WebSocket so other users receive it.
+        layoutSocket.send(JSON.stringify(data));
     }
 
     function showNotification(message, success=true) {
