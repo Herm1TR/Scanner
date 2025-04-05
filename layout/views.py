@@ -19,7 +19,7 @@ def register(request):
             login(request, user)
             default_colors = ["#FF0000", "#00FF00", "#0000FF", "#FFA500", "#800080"]
             color = random.choice(default_colors)
-            # creat default Box
+            # create default Box
             Box.objects.create(
                 x=50,
                 y=50,
@@ -61,7 +61,7 @@ def update_box_view(request):
             height = data.get('height')
             action = data.get('action', 'update')
 
-            # get the Box, check whether owner then update its status
+            # retrieve the box and verify the user is the owner before updating its properties
             box = Box.objects.get(pk=box_id)
             if box.owner != request.user:
                 return JsonResponse({'status': 'error', 'message': 'Permission denied.'}, status=403)

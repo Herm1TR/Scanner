@@ -2,8 +2,6 @@ from django.urls import path, include
 from layout.views import floorplan_view, update_box_view, register
 from rest_framework import routers
 from .views import BoxViewSet, OperationLogViewSet
-# from django.contrib.auth import views as auth_views
-
 
 router = routers.DefaultRouter()
 router.register(r'boxes', BoxViewSet)

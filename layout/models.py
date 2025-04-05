@@ -14,17 +14,17 @@ class Box(models.Model):
         on_delete=models.CASCADE,
         null=True,
         blank=True,
-        verbose_name="擁有者"
+        verbose_name="owner"
     )
-    color = models.CharField(max_length=7, default="#FF0000", verbose_name="方塊顏色")
+    color = models.CharField(max_length=7, default="#FF0000", verbose_name="box color")
 
     def __str__(self):
         return f"Box({self.id}) owned by {self.owner} - x:{self.x}, y:{self.y}, w:{self.width}, h:{self.height}"
 
 class OperationLog(models.Model):
     ACTION_CHOICES = (
-        ('drag', '拖曳'),
-        ('resize', '縮放'),
+        ('drag', 'Drag'),
+        ('resize', 'Resize'),
     )
     box = models.ForeignKey(Box, on_delete=models.CASCADE)
     action = models.CharField(max_length=10, choices=ACTION_CHOICES)

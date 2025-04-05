@@ -1,4 +1,4 @@
-# 環境變數
+# environment variable
 .env
 
 # Python
@@ -29,16 +29,16 @@ var/
 *.pot
 *.pyc
 
-# 虛擬環境
+# virtual environment
 venv/
 ENV/
 
-# IDE相關
+# IDE 
 .idea/
 .vscode/
 *.swp
 *.swo
 
-# 系統相關
+# sys
 .DS_Store
 Thumbs.db
