@@ -106,3 +106,7 @@ class BoxViewSet(viewsets.ModelViewSet):
 class OperationLogViewSet(viewsets.ModelViewSet):
     queryset = OperationLog.objects.all()
     serializer_class = OperationLogSerializer
+
+    def get_queryset(self):
+        # Return only Operationlog belonging to the current user
+        return OperationLog.objects.filter(box__owner=self.request.user).order_by('-timestamp')

@@ -102,7 +102,9 @@
                             left: {{ box.x|floatformat:"0" }}px; 
                             top:  {{ box.y|floatformat:"0" }}px; 
                             width: {{ box.width|floatformat:"0" }}px; 
-                            height: {{ box.height|floatformat:"0" }}px;">
+                            height: {{ box.height|floatformat:"0" }}px;
+                            background-color: {{ box.color }};
+                        ">
                         <div class="box-info">
                             x: {{ box.x|floatformat:"0" }}, <br>y: {{ box.y|floatformat:"0" }}<br>
                             w: {{ box.width|floatformat:"0" }}, <br>h: {{ box.height|floatformat:"0" }}
