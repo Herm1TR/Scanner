@@ -449,14 +449,13 @@
     });
 
     // Open a WebSocket connection to layout channel.
-    // const layoutSocket = new WebSocket(
-    // (window.location.protocol === "https:" ? "wss://" : "ws://") + window.location.host + "/ws/layout/"
-    // );
-
     const wsUrl = (window.location.protocol === "https:" ? "wss://" : "ws://") + window.location.host + "/ws/layout/";
     console.log("WebSocket URL:", wsUrl);
     const layoutSocket = new WebSocket(wsUrl);
 
+    layoutSocket.onopen = function() {
+        console.log("WebSocket connection opened:", wsUrl);
+    };
 
     // When a message is received from the server, update the corresponding box.
     layoutSocket.onmessage = function(e) {
@@ -474,7 +473,16 @@
                 "x: " + Math.round(data.x) + ", y: " + Math.round(data.y) +
                 "<br>w: " + Math.round(data.width) + ", h: " + Math.round(data.height)
             );
+            console.log("Message received:", e.data);
         }
+    };
+
+    layoutSocket.onerror = function(error) {
+        console.error("WebSocket error:", error);
+    };
+
+    layoutSocket.onclose = function() {
+        console.log("WebSocket connection closed");
     };
 
     // Function to update the box's position in the backend, and also send a WebSocket message.
