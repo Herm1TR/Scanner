@@ -1,20 +1,52 @@
-from django.shortcuts import render
+from django.shortcuts import render, redirect
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 import json
 from .models import Box, OperationLog
-from rest_framework import viewsets
+from rest_framework import viewsets, permissions
+from rest_framework.permissions import IsAuthenticated
 from .serializers import BoxSerializer, OperationLogSerializer
+from django.contrib.auth import login
+from django.contrib.auth.forms import UserCreationForm
+from django.contrib.auth.decorators import login_required
+import random
 
+def register(request):
+    if request.method == 'POST':
+        form = UserCreationForm(request.POST)
+        if form.is_valid():
+            user = form.save()
+            login(request, user)
+            default_colors = ["#FF0000", "#00FF00", "#0000FF", "#FFA500", "#800080"]
+            color = random.choice(default_colors)
+            # creat default Box
+            Box.objects.create(
+                x=50,
+                y=50,
+                width=100,
+                height=100,
+                owner=user,
+                color=color
+            )
+            return redirect('floorplan')
+    else:
+        form = UserCreationForm()
+    return render(request, 'registration/register.html', {'form': form})
 
+@login_required
 def floorplan_view(request):
     """
-    Renders the page with the floor plan background and draggable/resizable boxes.
+    Renders the page with the floor plan background and a draggable/resizable box for a login user.
     """
-    boxes = Box.objects.all()
-    return render(request, 'layout/floorplan.html', {'boxes': boxes})
+    boxes = Box.objects.filter(owner=request.user)
+    allowed_advanced_actions = request.user.groups.filter(name__in=["Engineer", "Admin"]).exists()
+    return render(request, 'layout/floorplan.html', {
+        'boxes': boxes,
+        'allowed_advanced_actions': allowed_advanced_actions,
+    })
 
 @csrf_exempt
+@login_required
 def update_box_view(request):
     """
     Receives updated box data via POST, saves to DB, and returns success/fail.
@@ -29,16 +61,18 @@ def update_box_view(request):
             height = data.get('height')
             action = data.get('action', 'update')
 
-            # 取得 Box 並更新狀態
+            # get the Box, check whether owner then update its status
             box = Box.objects.get(pk=box_id)
+            if box.owner != request.user:
+                return JsonResponse({'status': 'error', 'message': 'Permission denied.'}, status=403)
+            
             box.x = x
             box.y = y
             box.width = width
             box.height = height
             box.save()
             
-            # 記錄操作日誌
-            # if action in ['drag', 'resize']:
+            # create operation log
             OperationLog.objects.create(
                 box=box,
                 action=action,
@@ -53,9 +87,21 @@ def update_box_view(request):
 
     return JsonResponse({'status': 'error', 'message': 'Invalid request'}, status=400)
 
+class IsOwner(permissions.BasePermission):
+    """
+    Allow access only to the owner
+    """
+    def has_object_permission(self, request, view, obj):
+        return obj.owner == request.user
+
 class BoxViewSet(viewsets.ModelViewSet):
     queryset = Box.objects.all()
     serializer_class = BoxSerializer
+    permission_classes = [IsAuthenticated, IsOwner]
+
+    def get_queryset(self):
+        # Return only Boxes belonging to the current user
+        return Box.objects.filter(owner=self.request.user)
 
 class OperationLogViewSet(viewsets.ModelViewSet):
     queryset = OperationLog.objects.all()
