@@ -37,7 +37,8 @@
             width: 100%;
             max-width: 1358px;  /* adjust as needed */
             height: 686px;  /* adjust as needed */
-            background-size: cover;
+            background-size: contain;
+            background-repeat: no-repeat;
             background-position: center;
             border: 1px solid #ccc;
             margin: 20px auto;
@@ -69,7 +70,12 @@
     <div class="container-fluid">
         <!-- Navigation bar -->
         <nav class="navbar navbar-expand-lg navbar-light bg-light mb-3">
-            <a class="navbar-brand" href="#">Scanner UI</a>
+            <a class="navbar-brand" href="#">
+                Scanner UI
+                {% if user.is_authenticated %}
+                    <span class="navbar-text ml-2">[Hello, {{ user.username }}]</span>
+                {% endif %}
+            </a>
             <button class="navbar-toggler ml-auto" type="button" data-toggle="collapse" data-target="#navbarContent" 
                 aria-controls="navbarContent" aria-expanded="false" aria-label="Toggle navigation">
                 <span class="navbar-toggler-icon"></span>
@@ -93,7 +99,7 @@
         <!-- Floorplan area -->
         <div id="floorplan-wrapper">
             <div class="floorplan-container" id="floorplan"
-                 style="background-image: url('{% static 'images/map_2d.png' %}');">
+                 style="background-image: url('{% static 'images/blank-white.jpg' %}');">
                 {% for box in boxes %}
                     <div 
                         class="box" 
