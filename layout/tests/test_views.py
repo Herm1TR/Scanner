@@ -12,8 +12,8 @@ class LayoutViewsTest(TestCase):
         self.update_box_url = reverse('update_box')
         self.user_credentials = {
             'username': 'testuser',
-            'password1': 'password12345',
-            'password2': 'password12345'
+            'password1': 'ComplexPassw0rd!',
+            'password2': 'ComplexPassw0rd!'
         }
 
     def test_register_view_get(self):

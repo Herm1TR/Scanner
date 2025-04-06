@@ -78,5 +78,5 @@ This command will launch the ASGI server and enable real-time features via Djang
 * To run unit and integration tests:
 
 ```bash
-python manage.py test
+python manage.py test layout
 ```
