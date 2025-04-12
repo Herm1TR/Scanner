@@ -89,9 +89,10 @@
                 </div>
                 <!-- Right: Action buttons -->
                 <div class="ml-auto">
-                    <a href="{% url 'logout' %}" class="btn btn-secondary m-2">Logout</a>
+                    <button id="btn-add-box" class="btn btn-success m-2">Add Box</button>
                     <button id="btn-view-history" class="btn btn-primary m-2">View Operation History</button>
                     <button id="btn-view-chart" class="btn btn-primary m-2">View Operation Chart</button>
+                    <a href="{% url 'logout' %}" class="btn btn-secondary m-2">Logout</a>
                 </div>
             </div>
         </nav>
@@ -386,98 +387,230 @@
     }
 
     // Initialize draggable and resizable for boxes with real-time info updates
+    function initializeBox($box) {
+        const boxId = $box.attr('id').split('-')[1];  // 例如 "box-12" => "12"
+
+        $box.draggable({
+            containment: "#floorplan",
+            start: function(event, ui) {
+                // 存下原始位置
+                $box.data('oldPosition', { left: ui.position.left, top: ui.position.top });
+            },
+            drag: function(event, ui){
+                $box.find('.box-info').html(
+                    "x: " + Math.round(ui.position.left) +
+                    ", y: " + Math.round(ui.position.top) +
+                    "<br>w: " + Math.round($box.width()) +
+                    ", h: " + Math.round($box.height())
+                );
+            },
+            stop: function(event, ui){
+                const newLeft = ui.position.left;
+                const newTop = ui.position.top;
+                const newWidth = $box.width();
+                const newHeight = $box.height();
+                const oldPosition = $box.data('oldPosition');
+
+                // 檢查碰撞：不允許移動後與其他 box 重疊
+                if (checkCollision(newLeft, newTop, newWidth, newHeight, boxId)) {
+                    alert("Collision detected! Reverting changes.");
+                    if(oldPosition) {
+                        $box.css({
+                            left: oldPosition.left + "px",
+                            top: oldPosition.top + "px"
+                        });
+                        $box.find('.box-info').html(
+                            "x: " + Math.round(oldPosition.left) +
+                            ", y: " + Math.round(oldPosition.top) +
+                            "<br>w: " + Math.round(newWidth) +
+                            ", h: " + Math.round(newHeight)
+                        );
+                    }
+                    return;
+                }
+
+                const msg = `Do you want to save these changes?\nNew Position: x: ${Math.round(newLeft)}, y: ${Math.round(newTop)}\nNew Size: w: ${Math.round(newWidth)}, h: ${Math.round(newHeight)}`;
+                if(window.confirm(msg)) {
+                    updateBoxPosition(boxId, newLeft, newTop, newWidth, newHeight);
+                } else {
+                    if(oldPosition) {
+                        $box.css({
+                            left: oldPosition.left + "px",
+                            top: oldPosition.top + "px"
+                        });
+                        $box.find('.box-info').html(
+                            "x: " + Math.round(oldPosition.left) +
+                            ", y: " + Math.round(oldPosition.top) +
+                            "<br>w: " + Math.round(newWidth) +
+                            ", h: " + Math.round(newHeight)
+                        );
+                    }
+                }
+            }
+        }).resizable({
+            containment: "#floorplan",
+            handles: 'se',
+            start: function(event, ui) {
+                $box.data('oldSize', { left: ui.position.left, top: ui.position.top, width: ui.size.width, height: ui.size.height });
+            },
+            resize: function(event, ui){
+                $box.find('.box-info').html(
+                    "x: " + Math.round(ui.position.left) +
+                    ", y: " + Math.round(ui.position.top) +
+                    "<br>w: " + Math.round(ui.size.width) +
+                    ", h: " + Math.round(ui.size.height)
+                );
+            },
+            stop: function(event, ui){
+                const newLeft = ui.position.left;
+                const newTop = ui.position.top;
+                const newWidth = ui.size.width;
+                const newHeight = ui.size.height;
+                const oldSize = $box.data('oldSize');
+
+                // 檢查碰撞：不允許縮放後與其他 box 重疊
+                if (checkCollision(newLeft, newTop, newWidth, newHeight, boxId)) {
+                    alert("Collision detected! Reverting changes.");
+                    if(oldSize) {
+                        $box.css({
+                            left: oldSize.left + "px",
+                            top: oldSize.top + "px",
+                            width: oldSize.width + "px",
+                            height: oldSize.height + "px"
+                        });
+                        $box.find('.box-info').html(
+                            "x: " + Math.round(oldSize.left) +
+                            ", y: " + Math.round(oldSize.top) +
+                            "<br>w: " + Math.round(oldSize.width) +
+                            ", h: " + Math.round(oldSize.height)
+                        );
+                    }
+                    return;
+                }
+
+                const msg = `Do you want to save these changes?\nNew Position: x: ${Math.round(newLeft)}, y: ${Math.round(newTop)}\nNew Size: w: ${Math.round(newWidth)}, h: ${Math.round(newHeight)}`;
+                if(window.confirm(msg)) {
+                    updateBoxPosition(boxId, newLeft, newTop, newWidth, newHeight);
+                } else {
+                    if(oldSize) {
+                        $box.css({
+                            left: oldSize.left + "px",
+                            top: oldSize.top + "px",
+                            width: oldSize.width + "px",
+                            height: oldSize.height + "px"
+                        });
+                        $box.find('.box-info').html(
+                            "x: " + Math.round(oldSize.left) +
+                            ", y: " + Math.round(oldSize.top) +
+                            "<br>w: " + Math.round(oldSize.width) +
+                            ", h: " + Math.round(oldSize.height)
+                        );
+                    }
+                }
+            }
+        });
+    }
+
     $(function(){
         $('.box').each(function(){
-            const box = $(this);
-            const boxId = box.attr('id').split('-')[1];  // "box-12" => "12"
-
-            // Initialize draggable with confirmation on stop
-            box.draggable({
-                containment: "#floorplan",
-                start: function(event, ui) {
-                    // Store original position before dragging starts.
-                    box.data('oldPosition', { left: ui.position.left, top: ui.position.top });
-                },
-                drag: function(event, ui){
-                    box.find('.box-info').html(
-                        "x: " + Math.round(ui.position.left) + 
-                        ", y: " + Math.round(ui.position.top) + 
-                        "<br>w: " + Math.round(box.width()) + 
-                        ", h: " + Math.round(box.height())
-                    );
-                },
-                stop: function(event, ui){
-                    const newLeft = ui.position.left;
-                    const newTop = ui.position.top;
-                    const newWidth = box.width();
-                    const newHeight = box.height();
-                    const oldPosition = box.data('oldPosition');
-                    const msg = `Do you want to save these changes?\nNew Position: x: ${Math.round(newLeft)}, y: ${Math.round(newTop)}\nNew Size: w: ${Math.round(newWidth)}, h: ${Math.round(newHeight)}`;
-                    if(window.confirm(msg)) {
-                        // If confirmed, update via AJAX
-                        updateBoxPosition(boxId, newLeft, newTop, newWidth, newHeight);
-                    } else {
-                        // If canceled, revert to the stored old position.
-                        if(oldPosition) {
-                            box.css({
-                                left: oldPosition.left + "px",
-                                top: oldPosition.top + "px"
-                            });
-                            // Update displayed info to the old values.
-                            box.find('.box-info').html(
-                                "x: " + Math.round(oldPosition.left) + 
-                                ", y: " + Math.round(oldPosition.top) + 
-                                "<br>w: " + Math.round(newWidth) + 
-                                ", h: " + Math.round(newHeight)
-                            );
-                        }
-                    }
-                }
-            }).resizable({
-                containment: "#floorplan",
-                handles: 'se', // explicitly set the south-east handle
-                start: function(event, ui) {
-                // Store original size (and position) before resizing.
-                box.data('oldSize', { left: ui.position.left, top: ui.position.top, width: ui.size.width, height: ui.size.height });
-                },
-                resize: function(event, ui){
-                    box.find('.box-info').html(
-                        "x: " + Math.round(ui.position.left) + 
-                        ", y: " + Math.round(ui.position.top) + 
-                        "<br>w: " + Math.round(ui.size.width) + 
-                        ", h: " + Math.round(ui.size.height)
-                    );
-                },
-                stop: function(event, ui){
-                    const newLeft = ui.position.left;
-                    const newTop = ui.position.top;
-                    const newWidth = ui.size.width;
-                    const newHeight = ui.size.height;
-                    const oldSize = box.data('oldSize');
-                    const msg = `Do you want to save these changes?\nNew Position: x: ${Math.round(newLeft)}, y: ${Math.round(newTop)}\nNew Size: w: ${Math.round(newWidth)}, h: ${Math.round(newHeight)}`;
-                    if(window.confirm(msg)) {
-                        updateBoxPosition(boxId, newLeft, newTop, newWidth, newHeight);
-                    } else {
-                        // Revert back to old size and position.
-                        if(oldSize) {
-                            box.css({
-                                left: oldSize.left + "px",
-                                top: oldSize.top + "px",
-                                width: oldSize.width + "px",
-                                height: oldSize.height + "px"
-                            });
-                            box.find('.box-info').html(
-                                "x: " + Math.round(oldSize.left) + 
-                                ", y: " + Math.round(oldSize.top) + 
-                                "<br>w: " + Math.round(oldSize.width) + 
-                                ", h: " + Math.round(oldSize.height)
-                            );
-                        }
-                    }
-                }
-            });
+            initializeBox($(this));
         });
     });
+
+    $('#btn-add-box').click(function() {
+        let newLeft = 50, newTop = 50, newWidth = 100, newHeight = 100;
+        // 防重疊邏輯（簡單示例，根據需求調整）
+        while (checkCollision(newLeft, newTop, newWidth, newHeight)) {
+            newLeft += 10;
+            newTop += 10;
+            if (newLeft + newWidth > 1358 || newTop + newHeight > 686) {
+                alert("No available space for new box.");
+                return;
+            }
+        }
+
+        // 隨機選擇一個顏色
+        const defaultColors = ["#FF0000", "#00FF00", "#0000FF", "#FFA500", "#800080"];
+        const color = defaultColors[Math.floor(Math.random() * defaultColors.length)];
+        
+        const data = {
+            x: newLeft,
+            y: newTop,
+            width: newWidth,
+            height: newHeight,
+            color: color
+        };
+
+        // 發送 AJAX 請求新增 Box 到後端 API (使用 DRF 的 BoxViewSet)
+        $.ajax({
+            url: '/api/boxes/',
+            type: 'POST',
+            data: JSON.stringify(data),
+            contentType: "application/json; charset=utf-8",
+            success: function(response) {
+                // response 為新建立的 box 的資料 (包含 id)
+                const box = response;
+                // 新增新 box 到 DOM
+                const $newBox = $(`
+                    <div class="box" id="box-${box.id}" 
+                        style="left: ${Math.round(box.x)}px; top: ${Math.round(box.y)}px; 
+                                width: ${Math.round(box.width)}px; height: ${Math.round(box.height)}px;
+                                background-color: ${box.color};">
+                        <div class="box-info">
+                            x: ${Math.round(box.x)}, <br>y: ${Math.round(box.y)}<br>
+                            w: ${Math.round(box.width)}, <br>h: ${Math.round(box.height)}
+                        </div>
+                    </div>
+                `);
+                $('#floorplan').append($newBox);
+                // 為新 box 初始化功能（與原有 box 相同）
+                initializeBox($newBox);
+                showNotification("Add Box success");
+            },
+            error: function(xhr) {
+                showNotification("Add Box error", false);
+                console.error("Add Box error:", xhr);
+            }
+        });
+    });
+
+    // 假設我們定義一個全局函數判斷 box 是否與其他 box 重疊
+    function isOverlapping(newBox, existingBox) {
+        // newBox 和 existingBox 格式：{left, top, right, bottom}
+        return !(newBox.right <= existingBox.left ||
+                newBox.left >= existingBox.right ||
+                newBox.bottom <= existingBox.top ||
+                newBox.top >= existingBox.bottom);
+    }
+
+    function checkCollision(newLeft, newTop, newWidth, newHeight, selfId) {
+        let collision = false;
+        // 過濾掉當前 box
+        $(".box").not("#box-" + selfId).each(function() {
+            const pos = $(this).position();
+            const left = pos.left;
+            const top = pos.top;
+            const width = $(this).width();
+            const height = $(this).height();
+            const existingBox = {
+                left: left,
+                top: top,
+                right: left + width,
+                bottom: top + height
+            };
+            const newBox = {
+                left: newLeft,
+                top: newTop,
+                right: newLeft + newWidth,
+                bottom: newTop + newHeight
+            };
+            if (isOverlapping(newBox, existingBox)) {
+                collision = true;
+                return false; // break loop immediately
+            }
+        });
+        return collision;
+    }
 
     // Open a WebSocket connection to layout channel.
     const wsUrl = (window.location.protocol === "https:" ? "wss://" : "ws://") + window.location.host + "/ws/layout/";

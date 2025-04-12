@@ -102,6 +102,10 @@ class BoxViewSet(viewsets.ModelViewSet):
     def get_queryset(self):
         # Return only Boxes belonging to the current user
         return Box.objects.filter(owner=self.request.user)
+    
+    def perform_create(self, serializer):
+        # 自動設定 owner 為當前登入用戶
+        serializer.save(owner=self.request.user)
 
 class OperationLogViewSet(viewsets.ModelViewSet):
     queryset = OperationLog.objects.all()
