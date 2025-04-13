@@ -104,7 +104,7 @@ class BoxViewSet(viewsets.ModelViewSet):
         return Box.objects.filter(owner=self.request.user)
     
     def perform_create(self, serializer):
-        # 自動設定 owner 為當前登入用戶
+        # Automatically set the owner to the currently logged-in user
         serializer.save(owner=self.request.user)
 
 class OperationLogViewSet(viewsets.ModelViewSet):

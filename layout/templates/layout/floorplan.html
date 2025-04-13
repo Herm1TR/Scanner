@@ -388,12 +388,12 @@
 
     // Initialize draggable and resizable for boxes with real-time info updates
     function initializeBox($box) {
-        const boxId = $box.attr('id').split('-')[1];  // 例如 "box-12" => "12"
+        const boxId = $box.attr('id').split('-')[1];  // For example, "box-12" => "12"
 
         $box.draggable({
             containment: "#floorplan",
             start: function(event, ui) {
-                // 存下原始位置
+                // Store the original position
                 $box.data('oldPosition', { left: ui.position.left, top: ui.position.top });
             },
             drag: function(event, ui){
@@ -411,7 +411,7 @@
                 const newHeight = $box.height();
                 const oldPosition = $box.data('oldPosition');
 
-                // 檢查碰撞：不允許移動後與其他 box 重疊
+                // Check collision: Do not allow the box to overlap with others after moving
                 if (checkCollision(newLeft, newTop, newWidth, newHeight, boxId)) {
                     alert("Collision detected! Reverting changes.");
                     if(oldPosition) {
@@ -468,7 +468,7 @@
                 const newHeight = ui.size.height;
                 const oldSize = $box.data('oldSize');
 
-                // 檢查碰撞：不允許縮放後與其他 box 重疊
+                // Check collision: Do not allow the box to overlap with others after resizing
                 if (checkCollision(newLeft, newTop, newWidth, newHeight, boxId)) {
                     alert("Collision detected! Reverting changes.");
                     if(oldSize) {
@@ -519,7 +519,7 @@
 
     $('#btn-add-box').click(function() {
         let newLeft = 50, newTop = 50, newWidth = 100, newHeight = 100;
-        // 防重疊邏輯（簡單示例，根據需求調整）
+        //  Collision prevention logic (adjust as needed)
         while (checkCollision(newLeft, newTop, newWidth, newHeight)) {
             newLeft += 10;
             newTop += 10;
@@ -529,7 +529,7 @@
             }
         }
 
-        // 隨機選擇一個顏色
+        // Randomly select a color
         const defaultColors = ["#FF0000", "#00FF00", "#0000FF", "#FFA500", "#800080"];
         const color = defaultColors[Math.floor(Math.random() * defaultColors.length)];
         
@@ -541,16 +541,16 @@
             color: color
         };
 
-        // 發送 AJAX 請求新增 Box 到後端 API (使用 DRF 的 BoxViewSet)
+        // Send an AJAX request to add a new box to the backend API (using DRF's BoxViewSet)
         $.ajax({
             url: '/api/boxes/',
             type: 'POST',
             data: JSON.stringify(data),
             contentType: "application/json; charset=utf-8",
             success: function(response) {
-                // response 為新建立的 box 的資料 (包含 id)
+                // response build new box info (including id)
                 const box = response;
-                // 新增新 box 到 DOM
+                // Add the new box to the DOM
                 const $newBox = $(`
                     <div class="box" id="box-${box.id}" 
                         style="left: ${Math.round(box.x)}px; top: ${Math.round(box.y)}px; 
@@ -563,7 +563,7 @@
                     </div>
                 `);
                 $('#floorplan').append($newBox);
-                // 為新 box 初始化功能（與原有 box 相同）
+                // Initialize functionality for the new box (same as existing boxes)
                 initializeBox($newBox);
                 showNotification("Add Box success");
             },
@@ -574,9 +574,9 @@
         });
     });
 
-    // 假設我們定義一個全局函數判斷 box 是否與其他 box 重疊
+    // A global function to determine if a box overlaps with other boxes
     function isOverlapping(newBox, existingBox) {
-        // newBox 和 existingBox 格式：{left, top, right, bottom}
+        // newBox and existingBox format：{left, top, right, bottom}
         return !(newBox.right <= existingBox.left ||
                 newBox.left >= existingBox.right ||
                 newBox.bottom <= existingBox.top ||
@@ -585,7 +585,7 @@
 
     function checkCollision(newLeft, newTop, newWidth, newHeight, selfId) {
         let collision = false;
-        // 過濾掉當前 box
+        // exclude current existing box
         $(".box").not("#box-" + selfId).each(function() {
             const pos = $(this).position();
             const left = pos.left;
